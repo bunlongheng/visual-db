@@ -38,10 +38,12 @@ CLI: `DBCHART_URL=postgres://... dbchart public.mytable`
 ## Security - do NOT change without thought
 - The CODE is public (open source, MIT). That is safe: no secrets in the repo or its history
   (gitleaks clean), `web/.env.local` is gitignored, `.env.example` is a placeholder only.
-- Running it is LOCAL ONLY by default - no Vercel, no Caddy, no LaunchAgent, not in local-apps.
-- The web app has NO auth by default and serves every table read-only. NEVER expose it on a host
-  without setting `VISUAL_DB_TOKEN` (see web/lib/auth.ts + middleware.ts). Local dev needs no token.
-- A public DEPLOYMENT without a token would let anyone browse the connected database. Don't do that.
+- DEPLOYED (2026-08-21): https://visual-db-beta.vercel.app - connected to the REAL Linode DB,
+  gated by owner-only Google sign-in (Auth.js v5, ALLOWED_EMAILS=bheng.code@gmail.com).
+  Everything except /api/auth/* requires a session (or VISUAL_DB_TOKEN for agents). Fails closed.
+- NEVER remove the auth gate from the deployment, and never add emails to ALLOWED_EMAILS casually -
+  every allowed account can browse the whole database read-only.
+- Local dev with no auth env stays open on localhost only.
 
 ## Status (2026-08-21)
 - Builds clean; APIs verified; renders correctly. Manually tested on 4 tables (thryv.users 528,371 rows,
