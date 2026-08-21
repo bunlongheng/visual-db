@@ -1,0 +1,192 @@
+#!/usr/bin/env python3
+"""
+Visual DB - dbchart: profile ANY Postgres table into a self-contained HTML dashboard.
+
+  dbchart <schema.table> [--url URL] [--out FILE] [--top N] [--no-open]
+
+Connection resolution (first that works):
+  --url  >  $DBCHART_URL  >  $DATABASE_URL  >  DBCHART_URL/DATABASE_URL in ./.env
+"""
+import sys, os, re, json, subprocess, argparse, datetime, shutil, webbrowser
+
+HERE = os.path.dirname(os.path.realpath(__file__))
+# assets resolve relative to the script so the tool works wherever the repo is cloned
+def _find_assets():
+    for d in (os.path.join(HERE, "..", "assets"), os.path.join(HERE, "assets"),
+              os.path.expanduser("~/.local/share/dbchart")):
+        if os.path.exists(os.path.join(d, "template.html")):
+            return os.path.abspath(d)
+    return os.path.abspath(os.path.join(HERE, "..", "assets"))
+ASSETS = _find_assets()
+TEMPLATE = os.path.join(ASSETS, "template.html")
+CHARTJS = os.path.join(ASSETS, "chart.umd.min.js")
+
+NUMERIC = {"integer","bigint","smallint","numeric","double precision","real","decimal","money"}
+TEMPORAL = {"date","timestamp without time zone","timestamp with time zone","timestamptz","timestamp"}
+TEXTY = {"character varying","varchar","text","character","char","citext","uuid","name","inet","cidr"}
+STRINGY = {"character varying","varchar","text","character","char","citext"}  # safe for LIKE
+
+def die(msg):
+    print("dbchart: " + msg, file=sys.stderr); sys.exit(1)
+
+def resolve_url(cli_url):
+    if cli_url: return cli_url
+    for env in ("DBCHART_URL","DATABASE_URL","LINODE_DATABASE_URL"):
+        if os.environ.get(env): return os.environ[env]
+    for envf in (".env", os.path.expanduser("~/Sites/bheng/.env.local")):
+        if os.path.exists(envf):
+            for line in open(envf):
+                for key in ("DBCHART_URL=","DATABASE_URL=","LINODE_DATABASE_URL="):
+                    if line.startswith(key):
+                        return line.split("=",1)[1].strip().strip('"').strip("'")
+    die("no connection URL (pass --url, or set $DBCHART_URL / $DATABASE_URL, or add it to ./.env)")
+
+def psql(url, sql):
+    r = subprocess.run(["psql", url, "-tAqc", sql], capture_output=True, text=True)
+    if r.returncode != 0:
+        die("psql error:\n" + r.stderr.strip())
+    return r.stdout.strip()
+
+def j(url, sql):
+    out = psql(url, sql)
+    return json.loads(out) if out else None
+
+def qi(ident):  # quote identifier
+    return '"' + ident.replace('"', '""') + '"'
+def ql(s):      # quote literal
+    return "'" + str(s).replace("'", "''") + "'"
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("table", help="schema.table or table (defaults to public schema)")
+    ap.add_argument("--url"); ap.add_argument("--out"); ap.add_argument("--top", type=int, default=15)
+    ap.add_argument("--no-open", action="store_true")
+    a = ap.parse_args()
+
+    url = resolve_url(a.url)
+    schema, _, tbl = a.table.partition(".")
+    if not tbl: schema, tbl = "public", schema
+    rel = qi(schema) + "." + qi(tbl)
+    dbname = j(url, "SELECT current_database()")
+
+    cols = j(url, f"""SELECT coalesce(json_agg(json_build_object('name',column_name,'type',data_type)
+        ORDER BY ordinal_position),'[]') FROM information_schema.columns
+        WHERE table_schema={ql(schema)} AND table_name={ql(tbl)}""")
+    if not cols: die(f"table {schema}.{tbl} not found (or no columns)")
+    cols = cols[:40]
+
+    # ---- one-scan meta: nulls, distinct, min/max, email-ish ----
+    parts = ["'total', count(*)"]
+    for c in cols:
+        n, t, k = c["name"], c["type"], qi(c["name"])
+        obj = [f"'name',{ql(n)}", f"'type',{ql(t)}",
+               f"'nulls',count(*) FILTER (WHERE {k} IS NULL)",
+               f"'distinct',count(DISTINCT {k})"]
+        if t in NUMERIC:
+            obj += [f"'min',min({k})", f"'max',max({k})"]
+        if t in TEMPORAL:
+            obj += [f"'tmin',min({k})::text", f"'tmax',max({k})::text"]
+        if t in STRINGY:
+            obj += [f"'email',coalesce(bool_or({k} LIKE '%@%'),false)"]
+        parts.append(f"'{n}', json_build_object({','.join(obj)})")
+    meta = j(url, f"SELECT json_build_object({','.join(parts)}) FROM {rel}")
+    total = meta["total"] or 0
+    if total == 0: die("table is empty (0 rows)")
+
+    colmeta = []
+    for c in cols:
+        m = meta[c["name"]]
+        colmeta.append({"name": c["name"], "type": c["type"],
+                        "distinct": m["distinct"] or 0, "nulls": m["nulls"] or 0,
+                        "null_pct": round((m["nulls"] or 0)/total*100, 1),
+                        "_m": m})
+
+    # ---- classify + build charts ----
+    charts, temporal_span = [], None
+    def cat_query(k, order_val=False):
+        order = f"1" if order_val else "2 DESC"
+        return j(url, f"""SELECT coalesce(json_agg(r),'[]') FROM (
+            SELECT COALESCE({qi(k)}::text,'(null)') k, count(*) v FROM {rel}
+            GROUP BY 1 ORDER BY {order} LIMIT {a.top}) r""")
+
+    for cm in colmeta:
+        if len(charts) >= 12: break
+        n, t, m, dist = cm["name"], cm["type"], cm["_m"], cm["distinct"]
+        kl = n.lower()
+        if t in TEMPORAL:
+            data = j(url, f"""SELECT coalesce(json_agg(r),'[]') FROM (
+                SELECT to_char(date_trunc('month',{qi(n)}),'YYYY-MM') k, count(*) v
+                FROM {rel} WHERE {qi(n)} IS NOT NULL GROUP BY 1 ORDER BY 1) r""")
+            if data: charts.append({"title": n, "subtitle": "by month", "kind": "time", "data": data})
+            if m.get("tmin"): temporal_span = temporal_span or (n, m["tmin"][:10], m["tmax"][:10])
+        elif t == "boolean":
+            d = cat_query(n);
+            if d: charts.append({"title": n, "subtitle": "records", "kind": "category", "data": d})
+        elif t in TEXTY:
+            if m.get("email"):
+                d = j(url, f"""SELECT coalesce(json_agg(r),'[]') FROM (
+                    SELECT lower(split_part({qi(n)},'@',2)) k, count(*) v FROM {rel}
+                    WHERE {qi(n)} LIKE '%@%' GROUP BY 1 ORDER BY 2 DESC LIMIT {a.top}) r""")
+                if d: charts.append({"title": n+" - domains", "subtitle": f"top {a.top}", "kind": "domain", "data": d})
+            elif 2 <= dist <= 60 or (dist and dist/total <= 0.2 and dist <= 2000):
+                d = cat_query(n)
+                if d: charts.append({"title": n, "subtitle": f"top {min(a.top,dist)}", "kind": "category", "data": d})
+        elif t in NUMERIC:
+            lo, hi = m.get("min"), m.get("max")
+            if dist <= 1 or lo is None: continue
+            if kl.endswith("id") and dist >= total*0.98: continue   # skip pk-like
+            if dist <= 25:
+                d = cat_query(n, order_val=True)
+                if d: charts.append({"title": n, "subtitle": "by value", "kind": "ordinal", "data": d})
+            elif hi is not None and hi > lo:
+                raw = j(url, f"""SELECT coalesce(json_agg(r),'[]') FROM (
+                    SELECT least(greatest(width_bucket({qi(n)}::double precision,{lo},{hi},10),1),10) b, count(*) v
+                    FROM {rel} WHERE {qi(n)} IS NOT NULL GROUP BY 1 ORDER BY 1) r""")
+                w = (float(hi)-float(lo))/10.0
+                buckets = {int(x["b"]): x["v"] for x in (raw or [])}
+                def lab(i):
+                    a0 = float(lo)+w*(i-1); b0 = float(lo)+w*i
+                    f = (lambda z: (f"{z:.0f}" if abs(z)>=100 else f"{z:.2g}"))
+                    return f"{f(a0)}-{f(b0)}"
+                data = [{"k": lab(i), "v": buckets.get(i, 0)} for i in range(1, 11)]
+                charts.append({"title": n, "subtitle": "distribution", "kind": "histogram", "data": data})
+
+    # log axis for very skewed horizontal bars
+    for c in charts:
+        vs = [d["v"] for d in c["data"] if d["v"] > 0]
+        if c["kind"] in ("category","domain") and len(vs) > 2 and max(vs) > 0 and min(vs) > 0 and max(vs)/min(vs) > 500:
+            c["log"] = True
+
+    # ---- KPIs ----
+    ncols = len(colmeta)
+    filled = 1 - sum(c["nulls"] for c in colmeta)/(total*ncols)
+    top_uniq = max(colmeta, key=lambda c: c["distinct"])
+    kpis = [
+        {"lab":"Total rows","val": f"{total:,}","note": f"in {tbl}"},
+        {"lab":"Columns","val": str(ncols),"note":"profiled"},
+        {"lab":"Cells filled","val": f"{filled*100:.0f}%","note":"non-null overall"},
+        {"lab":"Most unique","val": f"{top_uniq['distinct']:,}","note": f"{top_uniq['name']}","hot":True},
+    ]
+    if temporal_span:
+        kpis.append({"lab":"Date span","val": temporal_span[1],"note": f"→ {temporal_span[2]} ({temporal_span[0]})"})
+
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    DATA = {"meta": {"db": dbname, "table": f"{schema}.{tbl}", "generated": now,
+                     "total": total, "columns": [{k:c[k] for k in ("name","type","distinct","nulls","null_pct")} for c in colmeta]},
+            "kpis": kpis, "charts": charts}
+
+    # ---- render ----
+    html = open(TEMPLATE, encoding="utf-8").read()
+    chartjs = open(CHARTJS, encoding="utf-8").read()
+    html = html.replace("__TITLE__", f"Visual DB - {schema}.{tbl}")
+    html = html.replace("/*__CHARTJS__*/", chartjs)
+    html = html.replace("/*__DATA__*/", json.dumps(DATA, default=str))
+    out = a.out or os.path.expanduser(f"~/Desktop/{schema}.{tbl}-dashboard.html")
+    open(out, "w", encoding="utf-8").write(html)
+    print(f"dbchart: {schema}.{tbl}  ->  {out}")
+    print(f"         {total:,} rows, {ncols} cols, {len(charts)} charts")
+    if not a.no_open:
+        webbrowser.open("file://" + out)
+
+if __name__ == "__main__":
+    main()

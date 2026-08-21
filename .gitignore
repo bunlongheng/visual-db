@@ -1,0 +1,16 @@
+# secrets / connection strings - never commit
+.env
+.env.*
+*.env
+
+# generated dashboards can embed real row data / PII
+*-dashboard.html
+/out/
+/tmp/
+
+# python
+__pycache__/
+*.pyc
+
+# os
+.DS_Store

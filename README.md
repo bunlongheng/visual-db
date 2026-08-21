@@ -1,0 +1,62 @@
+# Visual DB
+
+Point it at **any Postgres table** and get a clean, self-contained HTML dashboard - no config, no per-table code. Visual DB introspects the column types, picks the right chart for each one, and bakes everything (data + Chart.js) into a single `.html` file you can open offline, forever.
+
+```bash
+dbchart thryv.users
+dbchart public.visits --url "postgres://user:pass@host:5432/mydb"
+```
+
+## Why
+
+Every time you want to *see* a table you end up writing the same `GROUP BY` queries and wiring up charts by hand. Visual DB does it once, generically:
+
+- **Reusable** - works on any table in any Postgres database. Nothing is hardcoded.
+- **Self-contained** - the output HTML embeds its data and the charting library. No server, no internet, no DB needed to view it. Mail it, archive it, open it in 3 years.
+- **Auto-profiling** - it reads `information_schema`, measures each column, and chooses a chart based on the type and cardinality.
+
+## Install
+
+```bash
+git clone <this-repo> ~/Sites/visual-db
+~/Sites/visual-db/install.sh      # symlinks bin/dbchart into ~/.local/bin
+```
+
+Requires `python3` and the `psql` client on your PATH.
+
+## Usage
+
+```bash
+dbchart <schema.table> [options]
+
+  --url URL     Postgres connection string (see resolution order below)
+  --out FILE    output path (default: ~/Desktop/<schema.table>-dashboard.html)
+  --top N       max categories per chart (default: 15)
+  --no-open     don't auto-open the file in a browser
+```
+
+**Connection resolution** (first that works): `--url` → `$DBCHART_URL` → `$DATABASE_URL` → `DBCHART_URL`/`DATABASE_URL` in a `./.env` file.
+
+## How it chooses charts
+
+| Column type | Chart |
+|-------------|-------|
+| `timestamp` / `date` | line - records per month over time |
+| `boolean` / low-cardinality text | doughnut (≤6 values) or bar |
+| text with `@` (emails) | bar of top email domains |
+| numeric, ≤25 distinct values | bar by value |
+| numeric, many values | 10-bucket histogram |
+| very skewed distributions | automatic log axis |
+
+It also renders KPI tiles (rows, columns, overall fill rate, most-unique column, date span) and a **column-quality table** (type, distinct count, null % for every column).
+
+Primary-key-like id columns and near-unique text columns are skipped as charts (they're noise) but still appear in the quality table.
+
+## Output
+
+One HTML file, ~220 KB, fully offline. All the data lives in a single `DATA` object at the top of an inline `<script>`; the charting library is inlined too. To retarget it at another table, just regenerate.
+
+## Notes
+
+- Postgres only for now (uses `information_schema` + `width_bucket`).
+- Generated dashboards can contain real row data / PII - they are git-ignored by default. Don't commit them.
