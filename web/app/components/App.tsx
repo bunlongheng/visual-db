@@ -129,7 +129,7 @@ function Dashboard({ data }: { data: ProfileData }) {
         </div>
       </header>
 
-      <div className="overview">
+      <div className={`overview${data.heatmap ? "" : " solo"}`}>
         <div className="ov-card">
           <p className="ov-title">Completeness</p>
           <FillGauge pct={data.meta.fillPct ?? 0} />
