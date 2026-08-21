@@ -8,7 +8,7 @@ Point it at any Postgres table, get a clean self-contained HTML dashboard. It in
 
 ## Where it lives
 - Local: `~/Sites/visual-db`  (tab alias: `_visual_db`)
-- Repo: github.com/bunlongheng/visual-db  (PRIVATE)
+- Repo: github.com/bunlongheng/visual-db  (PUBLIC, MIT, released 2026-08-21)
 
 ## Two parts
 1. **CLI** - `bin/dbchart <schema.table>` -> writes a one-shot offline HTML file. Python, no deps beyond `psql`.
@@ -36,10 +36,12 @@ npm run dev                # http://localhost:3000
 CLI: `DBCHART_URL=postgres://... dbchart public.mytable`
 
 ## Security - do NOT change without thought
-- LOCAL ONLY. No Vercel, no Caddy hostname, no LaunchAgent, not in the local-apps monitor.
-- A public deploy would let anyone browse the connected database. Never deploy this to the internet.
-- `web/.env.local` (real connection string) is gitignored. `.env.example` is a placeholder only.
-- Repo is private. Going public is gated behind a full pre-public safety scan (`/repo-public-audit`).
+- The CODE is public (open source, MIT). That is safe: no secrets in the repo or its history
+  (gitleaks clean), `web/.env.local` is gitignored, `.env.example` is a placeholder only.
+- Running it is LOCAL ONLY by default - no Vercel, no Caddy, no LaunchAgent, not in local-apps.
+- The web app has NO auth by default and serves every table read-only. NEVER expose it on a host
+  without setting `VISUAL_DB_TOKEN` (see web/lib/auth.ts + middleware.ts). Local dev needs no token.
+- A public DEPLOYMENT without a token would let anyone browse the connected database. Don't do that.
 
 ## Status (2026-08-21)
 - Builds clean; APIs verified; renders correctly. Manually tested on 4 tables (thryv.users 528,371 rows,
