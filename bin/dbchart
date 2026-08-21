@@ -31,14 +31,13 @@ def die(msg):
 
 def resolve_url(cli_url):
     if cli_url: return cli_url
-    for env in ("DBCHART_URL","DATABASE_URL","LINODE_DATABASE_URL"):
+    for env in ("DBCHART_URL","DATABASE_URL"):
         if os.environ.get(env): return os.environ[env]
-    for envf in (".env", os.path.expanduser("~/Sites/bheng/.env.local")):
-        if os.path.exists(envf):
-            for line in open(envf):
-                for key in ("DBCHART_URL=","DATABASE_URL=","LINODE_DATABASE_URL="):
-                    if line.startswith(key):
-                        return line.split("=",1)[1].strip().strip('"').strip("'")
+    if os.path.exists(".env"):
+        for line in open(".env"):
+            for key in ("DBCHART_URL=","DATABASE_URL="):
+                if line.startswith(key):
+                    return line.split("=",1)[1].strip().strip('"').strip("'")
     die("no connection URL (pass --url, or set $DBCHART_URL / $DATABASE_URL, or add it to ./.env)")
 
 def psql(url, sql):
@@ -87,7 +86,7 @@ def main():
         if t in TEMPORAL:
             obj += [f"'tmin',min({k})::text", f"'tmax',max({k})::text"]
         if t in STRINGY:
-            obj += [f"'email',coalesce(bool_or({k} LIKE '%@%'),false)"]
+            obj += [f"'email_ratio',(count(*) FILTER (WHERE {k} ~ '^[^@[:space:]]+@[^@[:space:]]+[.][^@[:space:]]+$'))::float / nullif(count(*) FILTER (WHERE {k} IS NOT NULL),0)"]
         parts.append(f"'{n}', json_build_object({','.join(obj)})")
     meta = j(url, f"SELECT json_build_object({','.join(parts)}) FROM {rel}")
     total = meta["total"] or 0
@@ -123,7 +122,7 @@ def main():
             d = cat_query(n);
             if d: charts.append({"title": n, "subtitle": "records", "kind": "category", "data": d})
         elif t in TEXTY:
-            if m.get("email"):
+            if (m.get("email_ratio") or 0) >= 0.8:
                 d = j(url, f"""SELECT coalesce(json_agg(r),'[]') FROM (
                     SELECT lower(split_part({qi(n)},'@',2)) k, count(*) v FROM {rel}
                     WHERE {qi(n)} LIKE '%@%' GROUP BY 1 ORDER BY 2 DESC LIMIT {a.top}) r""")
@@ -139,17 +138,33 @@ def main():
                 d = cat_query(n, order_val=True)
                 if d: charts.append({"title": n, "subtitle": "by value", "kind": "ordinal", "data": d})
             elif hi is not None and hi > lo:
+                # robust bounds: clamp to the 1-99 percentile so a single extreme
+                # outlier can't collapse every other row into one bucket (mirrors web/lib/profiler.ts)
+                pr = j(url, f"""SELECT json_build_object(
+                    'lo', percentile_cont(0.01) WITHIN GROUP (ORDER BY {qi(n)}::double precision),
+                    'hi', percentile_cont(0.99) WITHIN GROUP (ORDER BY {qi(n)}::double precision),
+                    'amin', min({qi(n)}::double precision), 'amax', max({qi(n)}::double precision))
+                    FROM {rel} WHERE {qi(n)} IS NOT NULL""")
+                lo2 = pr.get("lo") if pr else None
+                hi2 = pr.get("hi") if pr else None
+                clamped = False
+                if lo2 is not None and hi2 is not None and float(hi2) > float(lo2):
+                    loB, hiB = float(lo2), float(hi2)
+                    clamped = (hiB < float(pr.get("amax") or hiB)) or (loB > float(pr.get("amin") or loB))
+                else:
+                    loB, hiB = float(lo), float(hi)
                 raw = j(url, f"""SELECT coalesce(json_agg(r),'[]') FROM (
-                    SELECT least(greatest(width_bucket({qi(n)}::double precision,{lo},{hi},10),1),10) b, count(*) v
+                    SELECT least(greatest(width_bucket({qi(n)}::double precision,{loB},{hiB},10),1),10) b, count(*) v
                     FROM {rel} WHERE {qi(n)} IS NOT NULL GROUP BY 1 ORDER BY 1) r""")
-                w = (float(hi)-float(lo))/10.0
+                w = (hiB-loB)/10.0
                 buckets = {int(x["b"]): x["v"] for x in (raw or [])}
                 def lab(i):
-                    a0 = float(lo)+w*(i-1); b0 = float(lo)+w*i
+                    a0 = loB+w*(i-1); b0 = loB+w*i
                     f = (lambda z: (f"{z:.0f}" if abs(z)>=100 else f"{z:.2g}"))
                     return f"{f(a0)}-{f(b0)}"
                 data = [{"k": lab(i), "v": buckets.get(i, 0)} for i in range(1, 11)]
-                charts.append({"title": n, "subtitle": "distribution", "kind": "histogram", "data": data})
+                sub = "distribution (1-99 pct)" if clamped else "distribution"
+                charts.append({"title": n, "subtitle": sub, "kind": "histogram", "data": data})
 
     # log axis for very skewed horizontal bars
     for c in charts:
