@@ -18,15 +18,16 @@ const COLS = [
   { name: "user_id", type: "bigint" },
 ];
 
+// column entries are keyed "c:<name>" so a column named "total" can't clobber the row count
 const META = {
   total: 100,
-  created_at: { nulls: 0, distinct: 40, tmin: "2024-01-01 00:00:00", tmax: "2024-06-01 00:00:00" },
-  status: { nulls: 5, distinct: 4, email_ratio: 0 },
-  email: { nulls: 0, distinct: 95, email_ratio: 0.95 },
-  amount: { nulls: 0, distinct: 80, min: 0, max: 1000 },
-  rating: { nulls: 2, distinct: 5, min: 1, max: 5 },
-  is_active: { nulls: 0, distinct: 2 },
-  user_id: { nulls: 0, distinct: 100, min: 1, max: 100 },
+  "c:created_at": { nulls: 0, distinct: 40, tmin: "2024-01-01 00:00:00", tmax: "2024-06-01 00:00:00" },
+  "c:status": { nulls: 5, distinct: 4, email_ratio: 0 },
+  "c:email": { nulls: 0, distinct: 95, email_ratio: 0.95 },
+  "c:amount": { nulls: 0, distinct: 80, min: 0, max: 1000 },
+  "c:rating": { nulls: 2, distinct: 5, min: 1, max: 5 },
+  "c:is_active": { nulls: 0, distinct: 2 },
+  "c:user_id": { nulls: 0, distinct: 100, min: 1, max: 100 },
 };
 
 function router(sql: string) {
@@ -93,6 +94,25 @@ describe("profileTable - full orchestration (mocked db)", () => {
     const data = await profileTable("public", "events");
     const status = data.meta.columns.find((c) => c.name === "status");
     expect(status!.null_pct).toBe(5); // 5 nulls / 100 rows
+  });
+
+  it("a column named 'total' does not clobber the row count", async () => {
+    queryMock.mockImplementation((sql: string) => {
+      if (sql.includes("current_database")) return Promise.resolve([{ db: "testdb" }]);
+      if (sql.includes("information_schema.columns"))
+        return Promise.resolve([{ name: "total", type: "numeric" }]);
+      if (sql.includes("json_build_object"))
+        return Promise.resolve([
+          { data: { total: 100, "c:total": { nulls: 10, distinct: 80, min: 1, max: 500 } } },
+        ]);
+      if (sql.includes("percentile_cont"))
+        return Promise.resolve([{ lo: 5, hi: 450, amin: 1, amax: 500 }]);
+      if (sql.includes("json_agg")) return Promise.resolve([{ data: [{ b: 1, v: 100 }] }]);
+      return Promise.resolve([]);
+    });
+    const data = await profileTable("public", "orders");
+    expect(data.meta.total).toBe(100);
+    expect(data.meta.columns[0].null_pct).toBe(10);
   });
 
   it("throws on an empty table", async () => {

@@ -87,14 +87,15 @@ def main():
             obj += [f"'tmin',min({k})::text", f"'tmax',max({k})::text"]
         if t in STRINGY:
             obj += [f"'email_ratio',(count(*) FILTER (WHERE {k} ~ '^[^@[:space:]]+@[^@[:space:]]+[.][^@[:space:]]+$'))::float / nullif(count(*) FILTER (WHERE {k} IS NOT NULL),0)"]
-        parts.append(f"'{n}', json_build_object({','.join(obj)})")
+        # "c:" prefix so a column literally named "total" can't clobber the row-count key
+        parts.append(f"{ql('c:' + n)}, json_build_object({','.join(obj)})")
     meta = j(url, f"SELECT json_build_object({','.join(parts)}) FROM {rel}")
     total = meta["total"] or 0
     if total == 0: die("table is empty (0 rows)")
 
     colmeta = []
     for c in cols:
-        m = meta[c["name"]]
+        m = meta["c:" + c["name"]]
         colmeta.append({"name": c["name"], "type": c["type"],
                         "distinct": m["distinct"] or 0, "nulls": m["nulls"] or 0,
                         "null_pct": round((m["nulls"] or 0)/total*100, 1),

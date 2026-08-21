@@ -146,7 +146,8 @@ export async function profileTable(
       obj.push(
         `'email_ratio',(count(*) FILTER (WHERE ${k} ~ '^[^@[:space:]]+@[^@[:space:]]+[.][^@[:space:]]+$'))::float / nullif(count(*) FILTER (WHERE ${k} IS NOT NULL),0)`
       );
-    parts.push(`${ql(n)}, json_build_object(${obj.join(",")})`);
+    // "c:" prefix so a column literally named "total" can't clobber the row-count key
+    parts.push(`${ql("c:" + n)}, json_build_object(${obj.join(",")})`);
   }
   const metaRows = await query<{ data: Record<string, any> }>(
     `SELECT json_build_object(${parts.join(",")}) as data FROM ${rel}`
@@ -158,7 +159,7 @@ export async function profileTable(
   }
 
   const colmeta: ColumnMeta[] = cols.map((c) => {
-    const m = (meta[c.name] as Record<string, unknown>) || {};
+    const m = (meta["c:" + c.name] as Record<string, unknown>) || {};
     const nulls = Number(m.nulls) || 0;
     return {
       name: c.name,
