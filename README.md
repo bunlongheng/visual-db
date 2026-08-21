@@ -19,6 +19,25 @@ The screenshots below show Visual DB profiling a **synthetic demo database** (ge
 
 ## Why
 
+## Architecture
+
+```mermaid
+flowchart TD
+    U["User"] --> CLI["dbchart CLI - bin/dbchart"]
+    U --> APP["Web UI - Next.js app in web/"]
+    APP -->|"GET /api/tables"| TABLES["Tables API route - pg_stat_user_tables"]
+    APP -->|"GET /api/profile"| PROFILE["Profile API route - 60s cache"]
+    PROFILE --> PROFILER["lib/profiler + lib/classify - pick a chart per column"]
+    TABLES --> PG[("Postgres")]
+    PROFILER -->|"aggregation SQL"| PG
+    CLI -->|"psql aggregation"| PG
+    PROFILE --> CHART["Chart.js render in the browser"]
+    CLI --> HTML["Self-contained HTML dashboard - Chart.js inlined"]
+```
+
+*2 entry points, 1 engine: the CLI bakes an offline HTML file while the web app profiles tables live via 2 API routes - both aggregate in Postgres and render with Chart.js.*
+
+
 Every time you want to *see* a table you end up writing the same `GROUP BY` queries and wiring up charts by hand. Visual DB does it once, generically:
 
 - **Reusable** - works on any table in any Postgres database. Nothing is hardcoded.
@@ -100,3 +119,9 @@ One HTML file, ~220 KB, fully offline. All the data lives in a single `DATA` obj
 
 - Postgres only for now (uses `information_schema` + `width_bucket`).
 - Generated dashboards can contain real row data / PII - they are git-ignored by default. Don't commit them.
+
+---
+
+<p align="center">
+  <sub>Built by <a href="https://bunlongheng.com">Bunlong Heng</a> &middot; <a href="https://bunlongheng.com/projects/visual-db">See it in my portfolio &rarr;</a></sub>
+</p>
