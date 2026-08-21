@@ -41,7 +41,18 @@ ChartJS.defaults.font.family =
 ChartJS.defaults.font.size = 11;
 ChartJS.defaults.color = "#9aa0c8";
 ChartJS.defaults.plugins.legend.display = false;
-ChartJS.defaults.animation = { duration: 650 };
+ChartJS.defaults.animation = { duration: 900, easing: "easeOutQuart" };
+
+// staggered entrance - elements sweep in one after another on first paint,
+// instead of the whole chart popping in at once
+const stagger = (count: number) => ({
+  duration: 900,
+  easing: "easeOutQuart" as const,
+  delay: (ctx: { type?: string; mode?: string; dataIndex?: number }) =>
+    ctx.type === "data" && ctx.mode === "default"
+      ? ((ctx.dataIndex ?? 0) / Math.max(1, count)) * 550
+      : 0,
+});
 
 // dark analytics-studio palette - vibrant, high-saturation, distinct on near-black
 const PALETTE = {
@@ -133,6 +144,7 @@ export default function Chart({ spec, big }: { spec: ChartSpec; big: boolean }) 
           ],
         },
         options: {
+          animation: stagger(vals.length),
           plugins: {
             tooltip: {
               ...tip,
@@ -166,6 +178,7 @@ export default function Chart({ spec, big }: { spec: ChartSpec; big: boolean }) 
         },
         options: {
           cutout: "58%",
+          animation: { ...stagger(vals.length), animateRotate: true, animateScale: true },
           maintainAspectRatio: false,
           plugins: {
             tooltip: { ...tip, callbacks: { label: (c) => " " + nf(c.parsed as number) } },
@@ -215,6 +228,7 @@ export default function Chart({ spec, big }: { spec: ChartSpec; big: boolean }) 
         },
         options: {
           indexAxis: horiz ? "y" : "x",
+          animation: stagger(vals.length),
           maintainAspectRatio: false,
           plugins: {
             tooltip: { ...tip, callbacks: { label: (c) => " " + nf((c.parsed.y ?? c.parsed.x ?? c.parsed) as number) } },

@@ -38,12 +38,20 @@ CLI: `DBCHART_URL=postgres://... dbchart public.mytable`
 ## Security - do NOT change without thought
 - The CODE is public (open source, MIT). That is safe: no secrets in the repo or its history
   (gitleaks clean), `web/.env.local` is gitignored, `.env.example` is a placeholder only.
-- DEPLOYED (2026-08-21): https://visual-db-bheng.vercel.app - connected to the REAL Linode DB,
-  gated by owner-only Google sign-in (Auth.js v5, ALLOWED_EMAILS=bheng.code@gmail.com).
-  Everything except /api/auth/* requires a session (or VISUAL_DB_TOKEN for agents). Fails closed.
-- NEVER remove the auth gate from the deployment, and never add emails to ALLOWED_EMAILS casually -
-  every allowed account can browse the whole database read-only.
-- Local dev with no auth env stays open on localhost only.
+- HARD RULE (2026-08-21, owner): production NEVER connects to the real database. The real Linode
+  DB (2026) is LOCAL-ONLY - only web/.env.local may hold its URL. Never put it in any Vercel env.
+- DEPLOYED (2026-08-21): https://visual-db-bheng.vercel.app is a DEMO SANDBOX - it connects only
+  to `visualdb_demo`, a synthetic 10-table database seeded by web/scripts/seed-demo.mjs
+  (~93k rows: customers, orders, products, payments, subscriptions, page_views, reviews,
+  support_tickets, employees, campaigns). Reseed: DEMO_DATABASE_URL=...visualdb_demo node scripts/seed-demo.mjs
+- The `visualdb_demo` PG role is isolated at 2 layers: pg_hba only allows it into the
+  visualdb_demo database (SSL required), and CONNECT on 2026/bheng_e2e/postgres is revoked from
+  PUBLIC (granted explicitly to bheng, bheng_readonly, mindmaps_api). The role is also
+  default_transaction_read_only with a 15s statement_timeout.
+- Deploy gate: owner-only Google sign-in (Auth.js v5, ALLOWED_EMAILS=bheng.code@gmail.com) +
+  VISUAL_DB_TOKEN for agents. Everything except /api/auth/* fails closed. Since the deployed DB
+  is synthetic, the gate could be opened for public demo later - owner's call only.
+- Local dev with no auth env stays open on localhost only, pointed at the real DB via .env.local.
 
 ## Status (2026-08-21)
 - Builds clean; APIs verified; renders correctly. Manually tested on 4 tables (thryv.users 528,371 rows,

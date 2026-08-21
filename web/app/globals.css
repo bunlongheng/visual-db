@@ -32,6 +32,9 @@ a{color:inherit}
   text-transform:uppercase;margin:0 0 10px;
   background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
 .sidebar-title{font-family:var(--disp);font-weight:800;font-size:25px;letter-spacing:-.02em;margin:0;color:var(--ink)}
+.demo-pill{display:inline-block;margin-left:9px;padding:2px 9px;border-radius:999px;font-size:9px;
+  letter-spacing:.16em;font-weight:800;vertical-align:middle;text-transform:uppercase;
+  color:#0d0f1c;background:linear-gradient(90deg,#fbbf24,#fb7185);-webkit-background-clip:border-box;background-clip:border-box;-webkit-text-fill-color:#0d0f1c}
 .schema-group{margin-bottom:6px}
 .schema-name{font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;
   color:var(--faint);padding:16px 22px 6px}

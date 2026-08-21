@@ -14,6 +14,9 @@ interface TableRow {
 
 const nf = (n: number) => n.toLocaleString("en-US");
 
+// set NEXT_PUBLIC_DEMO=1 on the hosted sandbox so visitors know the data is synthetic
+const DEMO = process.env.NEXT_PUBLIC_DEMO === "1";
+
 export default function App() {
   const searchParams = useSearchParams();
   const [tables, setTables] = useState<TableRow[]>([]);
@@ -85,7 +88,9 @@ export default function App() {
     <div className="shell">
       <aside className="sidebar">
         <div className="sidebar-head">
-          <p className="sidebar-eyebrow">Visual DB</p>
+          <p className="sidebar-eyebrow">
+            Visual DB{DEMO && <span className="demo-pill">demo</span>}
+          </p>
           <h2 className="sidebar-title">Tables</h2>
         </div>
         {tablesError && <p className="sidebar-empty">error: {tablesError}</p>}
@@ -154,7 +159,10 @@ function Dashboard({ data }: { data: ProfileData }) {
   return (
     <>
       <header className="dash-header">
-        <p className="eyebrow">Visual DB &nbsp;/&nbsp; table profile</p>
+        <p className="eyebrow">
+          Visual DB &nbsp;/&nbsp; table profile
+          {DEMO && <span className="demo-pill">demo sandbox - synthetic data</span>}
+        </p>
         <h1>{data.meta.table}</h1>
         <div className="sub">
           <span>database&nbsp; <b>{data.meta.db}</b></span>
