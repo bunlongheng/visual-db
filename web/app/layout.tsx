@@ -1,21 +1,21 @@
 import type { Metadata } from "next";
-import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
+import { Orbitron, Sora, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const fraunces = Fraunces({
+const orbitron = Orbitron({
   subsets: ["latin"],
-  weight: ["400", "600", "900"],
-  variable: "--font-fraunces",
+  weight: ["600", "700", "800"],
+  variable: "--font-orbitron",
 });
-const plexSans = IBM_Plex_Sans({
+const sora = Sora({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-sora",
+});
+const jet = JetBrains_Mono({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
-  variable: "--font-plex-sans",
-});
-const plexMono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-plex-mono",
+  variable: "--font-jet",
 });
 
 export const metadata: Metadata = {
@@ -27,7 +27,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${fraunces.variable} ${plexSans.variable} ${plexMono.variable}`}
+      className={`${orbitron.variable} ${sora.variable} ${jet.variable}`}
     >
       <body>{children}</body>
     </html>

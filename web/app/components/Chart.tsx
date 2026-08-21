@@ -36,36 +36,38 @@ ChartJS.register(
   Filler
 );
 
-ChartJS.defaults.font.family = "'IBM Plex Mono', ui-monospace, monospace";
+ChartJS.defaults.font.family =
+  "'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace";
 ChartJS.defaults.font.size = 11;
-ChartJS.defaults.color = "#75726a";
+ChartJS.defaults.color = "#9aa0c8";
 ChartJS.defaults.plugins.legend.display = false;
-ChartJS.defaults.animation = { duration: 550 };
+ChartJS.defaults.animation = { duration: 650 };
 
+// dark analytics-studio palette - vibrant, high-saturation, distinct on near-black
 const PALETTE = {
-  ink: "#1b1a17",
-  muted: "#75726a",
-  line: "#e4e1d7",
-  accent: "#b4531f",
-  card: "#ffffff",
-  c1: "#1f3b57",
-  c2: "#b4531f",
-  c3: "#2e7d6b",
-  c4: "#c99a2e",
-  c5: "#7c4a86",
-  c6: "#55702c",
-  c7: "#9c3b3b",
-  c8: "#64748b",
+  ink: "#eef0fb",
+  muted: "#9aa0c8",
+  line: "#232842",
+  accent: "#8b74ff",
+  card: "#12152a",
+  c1: "#8b74ff",
+  c2: "#22d3ee",
+  c3: "#f472b6",
+  c4: "#a3e635",
+  c5: "#fbbf24",
+  c6: "#fb7185",
+  c7: "#38bdf8",
+  c8: "#34d399",
 };
 const PAL = [
   PALETTE.c1,
+  PALETTE.c2,
   PALETTE.c3,
   PALETTE.c4,
   PALETTE.c5,
   PALETTE.c6,
   PALETTE.c7,
   PALETTE.c8,
-  PALETTE.c2,
 ];
 
 const nf = (n: number) => (typeof n === "number" ? n.toLocaleString("en-US") : n);
@@ -80,12 +82,16 @@ const sn = (v: number) => {
 const grid = { color: PALETTE.line, drawTicks: false };
 const noGrid = { display: false, drawBorder: false };
 const tip = {
-  backgroundColor: PALETTE.ink,
-  padding: 10,
-  cornerRadius: 0,
+  backgroundColor: "#0d0f1c",
+  borderColor: "#2c3253",
+  borderWidth: 1,
+  titleColor: "#eef0fb",
+  bodyColor: "#c7cbec",
+  padding: 11,
+  cornerRadius: 8,
   displayColors: false,
-  titleFont: { family: "'IBM Plex Mono'" },
-  bodyFont: { family: "'IBM Plex Mono'" },
+  titleFont: { family: "'JetBrains Mono'" },
+  bodyFont: { family: "'JetBrains Mono'" },
 };
 
 export default function Chart({ spec, big }: { spec: ChartSpec; big: boolean }) {
@@ -111,13 +117,13 @@ export default function Chart({ spec, big }: { spec: ChartSpec; big: boolean }) 
             {
               data: vals,
               borderColor: PALETTE.accent,
-              backgroundColor: "#efe1d7",
-              borderWidth: 2,
+              backgroundColor: "rgba(139,116,255,0.16)",
+              borderWidth: 2.5,
               fill: true,
-              pointRadius: vals.length > 40 ? 1 : 2,
+              pointRadius: vals.length > 40 ? 0 : 2,
               pointBackgroundColor: PALETTE.accent,
               pointHoverRadius: 5,
-              tension: 0.25,
+              tension: 0.4,
             },
           ],
         },
@@ -189,7 +195,19 @@ export default function Chart({ spec, big }: { spec: ChartSpec; big: boolean }) 
       const logx = !!spec.log;
       config = {
         type: "bar",
-        data: { labels, datasets: [{ data: vals, backgroundColor: colors, borderWidth: 0 }] },
+        data: {
+          labels,
+          datasets: [
+            {
+              data: vals,
+              backgroundColor: colors,
+              borderWidth: 0,
+              borderRadius: 6,
+              borderSkipped: false,
+              maxBarThickness: 46,
+            },
+          ],
+        },
         options: {
           indexAxis: horiz ? "y" : "x",
           maintainAspectRatio: false,
