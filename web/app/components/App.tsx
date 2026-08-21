@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Chart from "./Chart";
-import { FillGauge, CalendarHeatmap } from "./Widgets";
+import { FillGauge, CalendarHeatmap, CardinalityBars } from "./Widgets";
 import type { ProfileData } from "@/lib/profiler";
 
 interface TableRow {
@@ -40,9 +40,14 @@ export default function App() {
   useEffect(() => {
     fetch("/api/tables")
       .then((r) => r.json())
-      .then((rows) => {
+      .then((rows: TableRow[] & { error?: string }) => {
         if (rows.error) throw new Error(rows.error);
         setTables(rows);
+        // never show an empty page: auto-open the largest table when nothing is selected
+        if (rows.length) {
+          const biggest = rows.reduce((b, r) => (r.rows_estimate > b.rows_estimate ? r : b), rows[0]);
+          setSelected((prev) => prev ?? { schema: biggest.schema, table: biggest.table });
+        }
       })
       .catch((e) => setTablesError(e.message));
   }, []);
@@ -103,8 +108,7 @@ export default function App() {
       </aside>
       <main className="main">
         <div className="wrap">
-          {!selected && <div className="state">Select a table from the sidebar to profile it.</div>}
-          {selected && loading && <div className="state">Profiling {selected.schema}.{selected.table}...</div>}
+          {(!selected || loading) && !error && <Skeleton />}
           {selected && error && <div className="state err">error: {error}</div>}
           {selected && !loading && !error && data && <Dashboard data={data} />}
         </div>
@@ -113,8 +117,40 @@ export default function App() {
   );
 }
 
+// shimmer placeholder while a profile loads - never a blank page or bare text
+function Skeleton() {
+  return (
+    <div className="skel" aria-hidden="true">
+      <div className="skel-line w40" />
+      <div className="skel-line w70 tall" />
+      <div className="skel-row">
+        <div className="skel-card h150" />
+        <div className="skel-card h150 grow" />
+      </div>
+      <div className="skel-row">
+        {[0, 1, 2, 3].map((i) => (
+          <div className="skel-card h90 grow" key={i} />
+        ))}
+      </div>
+      <div className="skel-row">
+        <div className="skel-card h260 grow" />
+        <div className="skel-card h260 grow" />
+      </div>
+      <div className="skel-card h260" />
+    </div>
+  );
+}
+
 function Dashboard({ data }: { data: ProfileData }) {
   const maxDistinct = Math.max(1, ...data.meta.columns.map((c) => c.distinct));
+  // pair half-width panels; an unpaired s6 stretches to full width so no row has a gap
+  const isBig = (c: ProfileData["charts"][number]) =>
+    c.kind === "time" || c.kind === "domain" || c.data.length > 7;
+  const spans: number[] = data.charts.map((c) => (isBig(c) ? 12 : 6));
+  for (let i = 0; i < spans.length; i++) {
+    if (spans[i] === 6 && spans[i + 1] !== 6) spans[i] = 12; // lone half panel -> full row
+    else if (spans[i] === 6) i++; // consumed a pair
+  }
   return (
     <>
       <header className="dash-header">
@@ -129,17 +165,24 @@ function Dashboard({ data }: { data: ProfileData }) {
         </div>
       </header>
 
-      <div className={`overview${data.heatmap ? "" : " solo"}`}>
+      <div className="overview">
         <div className="ov-card">
           <p className="ov-title">Completeness</p>
           <FillGauge pct={data.meta.fillPct ?? 0} />
         </div>
-        {data.heatmap && (
+        {data.heatmap ? (
           <div className="ov-card ov-wide">
             <p className="ov-title">
               Activity <span>{data.heatmap.column} - rows per day, last 26 weeks</span>
             </p>
             <CalendarHeatmap heatmap={data.heatmap} />
+          </div>
+        ) : (
+          <div className="ov-card ov-wide">
+            <p className="ov-title">
+              Cardinality <span>distinct values per column</span>
+            </p>
+            <CardinalityBars columns={data.meta.columns} />
           </div>
         )}
       </div>
@@ -156,7 +199,7 @@ function Dashboard({ data }: { data: ProfileData }) {
 
       <div className="grid">
         {data.charts.map((c, i) => {
-          const big = c.kind === "time" || c.kind === "domain" || c.data.length > 7;
+          const big = spans[i] === 12;
           return (
             <section className={`panel ${big ? "s12" : "s6"}`} key={i}>
               <p className="ptitle">

@@ -1,6 +1,34 @@
 "use client";
 
-import type { HeatmapData } from "@/lib/profiler";
+import type { HeatmapData, ColumnQuality } from "@/lib/profiler";
+
+const ROWPAL = ["#8b74ff", "#22d3ee", "#f472b6", "#a3e635", "#fbbf24", "#38bdf8"];
+
+// ---- Cardinality panel - distinct values per column as colored meters ----
+// Fills the overview row when a table has no date column (no heatmap available).
+export function CardinalityBars({ columns }: { columns: ColumnQuality[] }) {
+  const top = [...columns].sort((a, b) => b.distinct - a.distinct).slice(0, 6);
+  const max = Math.max(1, top[0]?.distinct ?? 1);
+  return (
+    <div className="cardin">
+      {top.map((c, i) => (
+        <div className="cardin-row" key={c.name}>
+          <span className="cardin-name">{c.name}</span>
+          <span className="cardin-track">
+            <span
+              className="cardin-fill"
+              style={{
+                width: `${Math.max(3, (c.distinct / max) * 100)}%`,
+                background: ROWPAL[i % ROWPAL.length],
+              }}
+            />
+          </span>
+          <span className="cardin-val">{c.distinct.toLocaleString("en-US")}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 // ---- Fill-rate gauge (SVG semicircle) - overall non-null completeness ----
 export function FillGauge({ pct }: { pct: number }) {
@@ -83,7 +111,13 @@ export function CalendarHeatmap({ heatmap }: { heatmap: HeatmapData }) {
   return (
     <div className="heat">
       <div className="heat-scroll">
-        <svg width={width} height={height} role="img" aria-label={`Daily row counts for ${heatmap.column}`}>
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          style={{ width: "100%", height: "auto", maxHeight: 190, display: "block" }}
+          preserveAspectRatio="xMidYMid meet"
+          role="img"
+          aria-label={`Daily row counts for ${heatmap.column}`}
+        >
           {cells.map((c, i) => (
             <rect
               key={i}
