@@ -3,7 +3,8 @@ import { profileTable, type ProfileData } from "@/lib/profiler";
 
 // A profile is a full table scan, so cache the result briefly - re-viewing the same
 // table (the common case) then returns instantly instead of re-scanning.
-const TTL_MS = 60_000;
+// Configurable via PROFILE_CACHE_TTL_MS (default 60s; 0 disables caching).
+const TTL_MS = Number(process.env.PROFILE_CACHE_TTL_MS ?? 60_000);
 const cache = new Map<string, { at: number; data: ProfileData }>();
 
 export async function GET(req: NextRequest) {

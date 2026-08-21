@@ -37,6 +37,36 @@ dbchart <schema.table> [options]
 
 **Connection resolution** (first that works): `--url` → `$DBCHART_URL` → `$DATABASE_URL` → `DBCHART_URL`/`DATABASE_URL` in a `./.env` file.
 
+## Web app
+
+There is also a Next.js web app in `web/` - a live version with a sidebar of every table; click one to profile it instantly.
+
+```bash
+cd web
+cp .env.example .env.local      # set DATABASE_URL=postgres://...
+npm install
+npm run dev                     # http://localhost:3000
+```
+
+Quality gates: `npm test` (vitest), `npm run lint`, `npm run typecheck`. CI runs all of them plus the build on every push.
+
+## Security & deploying
+
+**By default the web app has no authentication and serves every table read-only** - which is exactly what you want on your own machine. It is meant to run on `localhost`.
+
+If you want to run it on a shared host, set a token so only you can reach it:
+
+```bash
+# in web/.env.local
+VISUAL_DB_TOKEN=some-long-random-string
+```
+
+With a token set, every request is rejected unless it carries the token. Unlock a browser once by visiting `http://your-host/?token=some-long-random-string` (it is stored in an httpOnly cookie and stripped from the URL); API clients pass it as `Authorization: Bearer <token>`, an `x-visual-db-token` header, or `?token=`. Responses also carry a strict CSP and the standard hardening headers.
+
+> Never expose the web app publicly without a token - it would let anyone browse the connected database.
+
+Other configurable settings (see `web/.env.example`): `DATABASE_URL` / `DBCHART_URL` (connection), `PROFILE_CACHE_TTL_MS` (profile cache, default 60s).
+
 ## How it chooses charts
 
 | Column type | Chart |
