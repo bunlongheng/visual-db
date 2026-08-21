@@ -9,13 +9,13 @@ dbchart public.visits --url "postgres://user:pass@host:5432/mydb"
 
 ## Demo
 
-The screenshots below show Visual DB profiling a **synthetic demo database** (generated fake data - no real records). Click any table in the sidebar and the full dashboard renders instantly.
+The screenshots below show Visual DB profiling a **synthetic demo database** (generated fake data - no real records). Click any table in the sidebar and the full dashboard renders instantly - a completeness gauge, a calendar activity heatmap, category doughnuts, distribution histograms, a trend line, and a per-column quality table.
 
-![Visual DB profiling a products table - category and price distribution](docs/screenshots/products.png)
+![Visual DB - full table dashboard with completeness gauge, activity heatmap, and charts](docs/screenshots/dashboard.png)
 
 |  |  |
 | --- | --- |
-| ![Event profile with category doughnuts](docs/screenshots/events.png) | ![Subscription profile with domains and plan mix](docs/screenshots/subscriptions.png) |
+| ![Product profile - category and price distribution](docs/screenshots/products.png) | ![Subscription profile - domains, plan mix, and activity](docs/screenshots/subscriptions.png) |
 
 ## Why
 
