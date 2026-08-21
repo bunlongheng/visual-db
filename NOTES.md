@@ -38,7 +38,7 @@ CLI: `DBCHART_URL=postgres://... dbchart public.mytable`
 ## Security - do NOT change without thought
 - The CODE is public (open source, MIT). That is safe: no secrets in the repo or its history
   (gitleaks clean), `web/.env.local` is gitignored, `.env.example` is a placeholder only.
-- DEPLOYED (2026-08-21): https://visual-db-beta.vercel.app - connected to the REAL Linode DB,
+- DEPLOYED (2026-08-21): https://visual-db-bheng.vercel.app - connected to the REAL Linode DB,
   gated by owner-only Google sign-in (Auth.js v5, ALLOWED_EMAILS=bheng.code@gmail.com).
   Everything except /api/auth/* requires a session (or VISUAL_DB_TOKEN for agents). Fails closed.
 - NEVER remove the auth gate from the deployment, and never add emails to ALLOWED_EMAILS casually -
