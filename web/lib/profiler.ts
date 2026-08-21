@@ -42,16 +42,24 @@ export interface ColumnQuality {
   null_pct: number;
 }
 
+export interface HeatmapData {
+  column: string;
+  days: { d: string; v: number }[]; // YYYY-MM-DD -> row count
+  max: number;
+}
+
 export interface ProfileData {
   meta: {
     db: string;
     table: string;
     generated: string;
     total: number;
+    fillPct: number; // overall non-null percentage, 0-100
     columns: ColumnQuality[];
   };
   kpis: Kpi[];
   charts: ChartSpec[];
+  heatmap?: HeatmapData; // calendar heatmap for the primary date column, when present
 }
 
 // column type classification + the shared "what chart for this column" rule now
@@ -289,12 +297,31 @@ export async function profileTable(
     });
   }
 
+  // calendar heatmap: daily row counts over the last 182 days of the primary date column
+  let heatmap: HeatmapData | undefined;
+  if (temporalSpan) {
+    const hc = qi(temporalSpan[0]);
+    const days = await query<{ d: string; v: number }>(
+      `WITH b AS (SELECT max(${hc}) mx FROM ${rel} WHERE ${hc} IS NOT NULL)
+       SELECT to_char(date_trunc('day', ${hc}),'YYYY-MM-DD') d, count(*)::int v
+       FROM ${rel}, b
+       WHERE ${hc} IS NOT NULL AND ${hc} > b.mx - interval '182 days'
+       GROUP BY 1 ORDER BY 1`
+    );
+    if (days.length) {
+      const norm = days.map((x) => ({ d: x.d, v: Number(x.v) }));
+      const max = norm.reduce((mx, x) => Math.max(mx, x.v), 0);
+      heatmap = { column: temporalSpan[0], days: norm, max };
+    }
+  }
+
   return {
     meta: {
       db: dbname,
       table: `${schema}.${table}`,
       generated: formatNow(),
       total,
+      fillPct: Math.round(filled * 1000) / 10,
       columns: colmeta.map((c) => ({
         name: c.name,
         type: c.type,
@@ -305,5 +332,6 @@ export async function profileTable(
     },
     kpis,
     charts,
+    heatmap,
   };
 }

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Chart from "./Chart";
+import { FillGauge, CalendarHeatmap } from "./Widgets";
 import type { ProfileData } from "@/lib/profiler";
 
 interface TableRow {
@@ -127,6 +128,21 @@ function Dashboard({ data }: { data: ProfileData }) {
           <span>engine&nbsp; <b>PostgreSQL</b></span>
         </div>
       </header>
+
+      <div className="overview">
+        <div className="ov-card">
+          <p className="ov-title">Completeness</p>
+          <FillGauge pct={data.meta.fillPct ?? 0} />
+        </div>
+        {data.heatmap && (
+          <div className="ov-card ov-wide">
+            <p className="ov-title">
+              Activity <span>{data.heatmap.column} - rows per day, last 26 weeks</span>
+            </p>
+            <CalendarHeatmap heatmap={data.heatmap} />
+          </div>
+        )}
+      </div>
 
       <div className="kpis" style={{ ["--kn" as string]: Math.min(data.kpis.length, 5) }}>
         {data.kpis.map((k, i) => (
