@@ -59,15 +59,20 @@ const PALETTE = {
   c7: "#38bdf8",
   c8: "#34d399",
 };
+// 12-color vibrant spectrum so every chart reads as a full rainbow on the dark canvas
 const PAL = [
-  PALETTE.c1,
-  PALETTE.c2,
-  PALETTE.c3,
-  PALETTE.c4,
-  PALETTE.c5,
-  PALETTE.c6,
-  PALETTE.c7,
-  PALETTE.c8,
+  "#8b74ff", // violet
+  "#22d3ee", // cyan
+  "#f472b6", // pink
+  "#a3e635", // lime
+  "#fbbf24", // amber
+  "#fb7185", // rose
+  "#38bdf8", // sky
+  "#34d399", // emerald
+  "#c084fc", // purple
+  "#fb923c", // orange
+  "#2dd4bf", // teal
+  "#facc15", // yellow
 ];
 
 const nf = (n: number) => (typeof n === "number" ? n.toLocaleString("en-US") : n);
@@ -190,8 +195,8 @@ export default function Chart({ spec, big }: { spec: ChartSpec; big: boolean }) 
       };
     } else {
       const horiz = spec.kind === "domain" || (spec.kind === "category" && labels.length > 7);
-      const single = spec.kind === "histogram" || spec.kind === "ordinal" || spec.kind === "domain";
-      const colors = single ? PALETTE.c1 : labels.map((_, i) => PAL[i % PAL.length]);
+      // every bar gets its own hue from the 12-color spectrum - a full rainbow per chart
+      const colors = labels.map((_, i) => PAL[i % PAL.length]);
       const logx = !!spec.log;
       config = {
         type: "bar",
