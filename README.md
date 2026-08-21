@@ -7,6 +7,16 @@ dbchart thryv.users
 dbchart public.visits --url "postgres://user:pass@host:5432/mydb"
 ```
 
+## Demo
+
+The screenshots below show Visual DB profiling a **synthetic demo database** (generated fake data - no real records). Click any table in the sidebar and the full dashboard renders instantly.
+
+![Visual DB profiling a products table - category and price distribution](docs/screenshots/products.png)
+
+|  |  |
+| --- | --- |
+| ![Event profile with category doughnuts](docs/screenshots/events.png) | ![Subscription profile with domains and plan mix](docs/screenshots/subscriptions.png) |
+
 ## Why
 
 Every time you want to *see* a table you end up writing the same `GROUP BY` queries and wiring up charts by hand. Visual DB does it once, generically:
