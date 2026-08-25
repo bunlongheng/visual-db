@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
-    "prepare": "cd .. && git config core.hooksPath web/.husky"
+    "prepare": "cd .. && git config core.hooksPath web/.husky 2>/dev/null || true"
   },
   "dependencies": {
     "chart.js": "^4.5.1",
