@@ -140,3 +140,25 @@ table.q tr:hover td{background:rgba(139,116,255,.05)}
 .skel-card{height:120px;width:260px}
 .skel-card.grow{flex:1;width:auto}
 .skel-card.h90{height:90px}.skel-card.h150{height:150px}.skel-card.h260{height:260px}
+
+/* ---- sign-in page (branded, self-contained - replaces the Auth.js default) ---- */
+.signin{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.signin-card{width:min(440px,100%);background:var(--card);border:1px solid var(--line);
+  border-radius:22px;padding:44px 40px 36px;text-align:center;
+  box-shadow:0 30px 80px rgba(0,0,0,.5), 0 0 0 1px rgba(139,116,255,.06)}
+.signin-eyebrow{font-family:var(--brand);font-weight:700;font-size:12px;letter-spacing:.34em;
+  text-transform:uppercase;margin:0 0 18px;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.signin-title{font-family:var(--disp);font-weight:800;font-size:30px;letter-spacing:-.02em;
+  line-height:1.12;margin:0 0 12px;color:var(--ink)}
+.signin-sub{font-size:14.5px;color:var(--muted);margin:0 0 26px}
+.signin-err{font-family:var(--mono);font-size:12.5px;color:#fb7185;background:rgba(251,113,133,.09);
+  border:1px solid rgba(251,113,133,.28);border-radius:10px;padding:9px 12px;margin:0 0 18px}
+.gbtn{display:flex;align-items:center;justify-content:center;gap:11px;width:100%;
+  padding:13px 18px;border-radius:13px;border:1px solid var(--line2);cursor:pointer;
+  background:var(--card2);color:var(--ink);font-family:var(--sans);font-weight:600;font-size:15px;
+  transition:border-color .15s,transform .15s,box-shadow .15s}
+.gbtn:hover{border-color:var(--accent);transform:translateY(-1px);
+  box-shadow:0 8px 28px rgba(139,116,255,.22)}
+.gbtn:active{transform:translateY(0)}
+.signin-foot{font-family:var(--mono);font-size:11px;color:var(--faint);margin:22px 0 0}

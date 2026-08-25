@@ -34,7 +34,7 @@ async function gate(req: NextRequest): Promise<NextResponse> {
     const session = await auth();
     if (session?.user) return NextResponse.next();
     if (isApi) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-    const signin = new URL("/api/auth/signin", req.url);
+    const signin = new URL("/signin", req.url);
     signin.searchParams.set("callbackUrl", url.pathname + url.search);
     return NextResponse.redirect(signin);
   }
@@ -52,8 +52,9 @@ async function gate(req: NextRequest): Promise<NextResponse> {
 }
 
 export function middleware(req: NextRequest) {
-  // the auth endpoints themselves must stay reachable to sign in
-  if (new URL(req.url).pathname.startsWith("/api/auth")) return NextResponse.next();
+  // the auth endpoints + the sign-in page itself must stay reachable to sign in
+  const p = new URL(req.url).pathname;
+  if (p.startsWith("/api/auth") || p === "/signin") return NextResponse.next();
   return gate(req);
 }
 

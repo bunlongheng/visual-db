@@ -17,6 +17,8 @@ export const authEnabled = !!(
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true, // Vercel sets this automatically; needed for localhost/self-hosted
+  pages: { signIn: "/signin" }, // branded page; the Auth.js default breaks under our CSP
+
   providers: [
     Google({
       clientId: process.env.AUTH_GOOGLE_ID || process.env.GOOGLE_CLIENT_ID,
