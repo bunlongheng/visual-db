@@ -1,3 +1,13 @@
+<div align="center">
+  <img src="docs/icon.png" alt="Visual DB" width="96" height="96" />
+  <h1>Visual DB</h1>
+  <p><em>Point it at any Postgres table and get a self-contained HTML dashboard, no per-table code</em></p>
+  <p><a href="https://github.com/bunlongheng/visual-db">Repo</a> &middot; <a href="https://bunlongheng.com/projects?name=visual-db">Portfolio</a></p>
+  <img src="docs/social-preview.png" alt="Visual DB - preview" width="820" />
+</div>
+
+---
+
 # Visual DB
 
 Point it at **any Postgres table** and get a clean, self-contained HTML dashboard - no config, no per-table code. Visual DB introspects the column types, picks the right chart for each one, and bakes everything (data + Chart.js) into a single `.html` file you can open offline, forever.
