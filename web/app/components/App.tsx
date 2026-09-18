@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import Chart from "./Chart";
 import { FillGauge, CalendarHeatmap, CardinalityBars } from "./Widgets";
@@ -17,7 +17,7 @@ const nf = (n: number) => n.toLocaleString("en-US");
 // set NEXT_PUBLIC_DEMO=1 on the hosted sandbox so visitors know the data is synthetic
 const DEMO = process.env.NEXT_PUBLIC_DEMO === "1";
 
-export default function App() {
+export default function App({ account }: { account?: ReactNode }) {
   const searchParams = useSearchParams();
   const [tables, setTables] = useState<TableRow[]>([]);
   const [tablesError, setTablesError] = useState<string | null>(null);
@@ -93,23 +93,26 @@ export default function App() {
           </p>
           <h2 className="sidebar-title">Tables</h2>
         </div>
-        {tablesError && <p className="sidebar-empty">error: {tablesError}</p>}
-        {!tablesError && tables.length === 0 && <p className="sidebar-empty">loading tables...</p>}
-        {[...grouped.entries()].map(([schema, rows]) => (
-          <div className="schema-group" key={schema}>
-            <p className="schema-name">{schema}</p>
-            {rows.map((r) => (
-              <button
-                key={`${r.schema}.${r.table}`}
-                className={`table-item${selected?.schema === r.schema && selected?.table === r.table ? " active" : ""}`}
-                onClick={() => setSelected({ schema: r.schema, table: r.table })}
-              >
-                <span>{r.table}</span>
-                <span className="est">{nf(r.rows_estimate)}</span>
-              </button>
-            ))}
-          </div>
-        ))}
+        <div className="sidebar-list">
+          {tablesError && <p className="sidebar-empty">error: {tablesError}</p>}
+          {!tablesError && tables.length === 0 && <p className="sidebar-empty">loading tables...</p>}
+          {[...grouped.entries()].map(([schema, rows]) => (
+            <div className="schema-group" key={schema}>
+              <p className="schema-name">{schema}</p>
+              {rows.map((r) => (
+                <button
+                  key={`${r.schema}.${r.table}`}
+                  className={`table-item${selected?.schema === r.schema && selected?.table === r.table ? " active" : ""}`}
+                  onClick={() => setSelected({ schema: r.schema, table: r.table })}
+                >
+                  <span>{r.table}</span>
+                  <span className="est">{nf(r.rows_estimate)}</span>
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+        {account}
       </aside>
       <main className="main">
         <div className="wrap">

@@ -104,7 +104,14 @@ With a token set, every request is rejected unless it carries the token. Unlock 
 
 > Never expose the web app publicly without a token - it would let anyone browse the connected database.
 
-Other configurable settings (see `web/.env.example`): `DATABASE_URL` / `DBCHART_URL` (connection), `PROFILE_CACHE_TTL_MS` (profile cache, default 60s).
+### Sessions
+
+However you signed in (Google or token), the sidebar shows who you are and a **Sign out** button. Sessions end by themselves too:
+
+- **Idle** - after `IDLE_TIMEOUT_MINUTES` (default 15) with no interaction, the tab signs itself out and lands on the sign-in page. A countdown appears for the last 60 seconds.
+- **Closed tab or browser** - the session cookie is a browser-session cookie, so quitting the browser ends it; a tab closed and left closed expires with the same idle window, because nothing refreshes it.
+
+Other configurable settings (see `web/.env.example`): `DATABASE_URL` / `DBCHART_URL` (connection), `PROFILE_CACHE_TTL_MS` (profile cache, default 60s), `IDLE_TIMEOUT_MINUTES` (session idle window, default 15).
 
 ## How it chooses charts
 
