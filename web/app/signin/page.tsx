@@ -21,7 +21,7 @@ function GoogleG() {
 export default async function SignInPage({
   searchParams,
 }: {
-  searchParams: Promise<{ callbackUrl?: string; error?: string }>;
+  searchParams: Promise<{ callbackUrl?: string; error?: string; reason?: string }>;
 }) {
   const params = await searchParams;
   // only allow same-site relative callback targets
@@ -41,6 +41,13 @@ export default async function SignInPage({
           Point it at a Postgres table, get an animated dashboard - charts, calendar
           heatmap, and column quality with zero config.
         </p>
+        {!params.error && params.reason && (
+          <p className="signin-note">
+            {params.reason === "idle"
+              ? "Signed out after a spell of inactivity."
+              : "You are signed out."}
+          </p>
+        )}
         {params.error && (
           <p className="signin-err">
             {params.error === "AccessDenied"

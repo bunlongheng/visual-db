@@ -10,6 +10,11 @@ const allowed = (process.env.ALLOWED_EMAILS || "")
   .map((s) => s.trim().toLowerCase())
   .filter(Boolean);
 
+// Sessions are deliberately short-lived. The JWT carries its own expiry, so a tab that
+// is closed - or simply left alone - stops refreshing it and the session dies on its own.
+// Tune with IDLE_TIMEOUT_MINUTES (default 15).
+export const IDLE_MINUTES = Math.max(1, Number(process.env.IDLE_TIMEOUT_MINUTES) || 15);
+
 export const authEnabled = !!(
   (process.env.AUTH_GOOGLE_ID || process.env.GOOGLE_CLIENT_ID) &&
   (process.env.AUTH_GOOGLE_SECRET || process.env.GOOGLE_CLIENT_SECRET)
@@ -18,6 +23,9 @@ export const authEnabled = !!(
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true, // Vercel sets this automatically; needed for localhost/self-hosted
   pages: { signIn: "/signin" }, // branded page; the Auth.js default breaks under our CSP
+  // idle window; the cookie itself is downgraded to a browser-session cookie in
+  // app/api/auth/[...nextauth]/route.ts so closing the browser also ends the session
+  session: { strategy: "jwt", maxAge: IDLE_MINUTES * 60 },
 
   providers: [
     Google({
