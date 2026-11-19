@@ -12,6 +12,8 @@
   --mono:var(--font-jet),ui-monospace,"SF Mono",Menlo,monospace;
 }
 *{box-sizing:border-box} html,body{margin:0}
+/* iOS paints the safe areas beside the status pill with the html background */
+html{background:var(--bg)}
 body{
   background:var(--bg);color:var(--ink);font-family:var(--sans);
   -webkit-font-smoothing:antialiased;line-height:1.5;
